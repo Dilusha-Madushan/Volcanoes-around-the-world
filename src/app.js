@@ -3,6 +3,8 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const swaggerUI = require('swagger-ui-express');
 const YAML = require('yamljs');
+const knex = require('./config/db');
+const runSqlFile = require('./utils/runSqlFile')
 
 const dataRoutes = require('./api/routes/dataRoutes');
 const userRoutes = require('./api/routes/userRoutes');
@@ -55,8 +57,26 @@ app.use(errorHandler);
 
 
 // Start server
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+// Function to run initial setup like migrations and SQL files
+async function runInitialSetup() {
+    try {
+        // Run database migrations
+        await knex.migrate.latest();
+
+        // Execute SQL file
+        await runSqlFile();
+
+        // Start server after setup is complete
+        app.listen(PORT, () => {
+            console.log(`Server started on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error('Failed to start the application due to initial setup failure:', error);
+        process.exit(1);
+    }
+}
+
+// Execute the initial setup then start the server
+runInitialSetup();
 
 module.exports = app;
